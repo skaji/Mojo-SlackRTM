@@ -42,6 +42,7 @@ See [https://api.slack.com/rtm](https://api.slack.com/rtm) for details.
 
 ## call\_api
 
+    $slack->call_api($method);
     $slack->call_api($method, $param);
     $slack->call_api($method, $param, $cb);
 
@@ -139,11 +140,11 @@ Set `MOJO_SLACKRTM_DEBUG=1`.
 
 # AUTHOR
 
-Shoichi Kaji &lt;skaji@cpan.org>
+Shoichi Kaji <skaji@cpan.org>
 
 # COPYRIGHT AND LICENSE
 
-Copyright 2016 Shoichi Kaji &lt;skaji@cpan.org>
+Copyright 2016 Shoichi Kaji <skaji@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

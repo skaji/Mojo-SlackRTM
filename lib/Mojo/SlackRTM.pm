@@ -181,8 +181,8 @@ sub send_message {
 }
 
 sub call_api {
-    my ($self, $method, $param) = (shift, shift, shift);
-    my $url = "https://slack.com/api/$method";
+    my ($self, $method) = (shift, shift);
+    my $param = shift || +{};
     my $cb = shift || sub {
         my ($slack, $tx) = @_;
         if ($tx->success and $tx->res->json("/ok")) {
@@ -193,7 +193,9 @@ sub call_api {
         $slack->log->warn("$method: $error");
     };
     $param->{token} = $self->token unless exists $param->{token};
+
     DEBUG and $self->log->debug("===> call api '$method'");
+    my $url = "https://slack.com/api/$method";
     $self->ua->post($url => form => $param => sub {
         (undef, my $tx) = @_;
         $cb->($self, $tx);
@@ -249,6 +251,7 @@ See L<https://api.slack.com/rtm> for details.
 
 =head2 call_api
 
+  $slack->call_api($method);
   $slack->call_api($method, $param);
   $slack->call_api($method, $param, $cb);
 

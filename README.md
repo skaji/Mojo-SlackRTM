@@ -79,6 +79,10 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
     my $name = $slack->find_user_name($id);
 
+## finish
+
+    $slack->finish;
+
 ## next\_id
 
     my $id = $slack->next_id;
@@ -95,11 +99,16 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
     $slack->start;
 
+This is a convenient method. In fact it is equivalent to:
+
+    $slack->connect;
+    $slack->ioloop->start unless $slack->ioloop->is_running;
+
 # ATTRIBUTES
 
 ## ioloop
 
-[Mojo::IOLoop->singleton](https://metacpan.org/pod/Mojo::IOLoop->singleton)
+[Mojo::IOLoop](https://metacpan.org/pod/Mojo::IOLoop) singleton
 
 ## ua
 
@@ -111,7 +120,7 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
 ## metadata
 
-    my $metadata = $slack->metadata;
+The response of rtm.start. See [https://api.slack.com/methods/rtm.start](https://api.slack.com/methods/rtm.start) for details.
 
 ## token
 
@@ -123,8 +132,7 @@ Websocket transaction
 
 ## auto\_reconnect
 
-    my $bool = $slack->auto_reconnect;
-    $slack->auto_reconnect($bool);
+Automatically reconnect to slack
 
 # DEBUGGING
 

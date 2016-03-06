@@ -99,17 +99,21 @@ sub connect {
         $self->ws->on(finish => sub {
             my ($ws) = @_;
             $self->log->warn("detect 'finish' event");
-            $ws->finish;
-            $self->_clear;
+            $self->finish;
             $self->connect if $self->auto_reconnect;
         });
     });
 }
 
-sub reconnect {
+sub finish {
     my $self = shift;
     $self->ws->finish if $self->ws;
     $self->_clear;
+}
+
+sub reconnect {
+    my $self = shift;
+    $self->finish;
     $self->connect;
 }
 
@@ -288,6 +292,10 @@ Call slack api. See L<https://api.slack.com/methods> for details.
 
   my $name = $slack->find_user_name($id);
 
+=head2 finish
+
+  $slack->finish;
+
 =head2 next_id
 
   my $id = $slack->next_id;
@@ -304,11 +312,16 @@ Call slack api. See L<https://api.slack.com/methods> for details.
 
   $slack->start;
 
+This is a convenient method. In fact it is equivalent to:
+
+  $slack->connect;
+  $slack->ioloop->start unless $slack->ioloop->is_running;
+
 =head1 ATTRIBUTES
 
 =head2 ioloop
 
-L<< Mojo::IOLoop->singleton >>
+L<Mojo::IOLoop> singleton
 
 =head2 ua
 
@@ -320,7 +333,7 @@ L<Mojo::Log> instance
 
 =head2 metadata
 
-  my $metadata = $slack->metadata;
+The response of rtm.start. See L<https://api.slack.com/methods/rtm.start> for details.
 
 =head2 token
 
@@ -332,8 +345,7 @@ Websocket transaction
 
 =head2 auto_reconnect
 
-  my $bool = $slack->auto_reconnect;
-  $slack->auto_reconnect($bool);
+Automatically reconnect to slack
 
 =head1 DEBUGGING
 

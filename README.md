@@ -60,21 +60,39 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
 ## connect
 
+    $slack->connect;
+
 ## find\_channel\_id
+
+    my $id = $slack->find_channel_id($name);
 
 ## find\_channel\_name
 
+    my $name = $slack->find_channel_name($id);
+
 ## find\_user\_id
+
+    my $id = $slack->find_user_id($name);
 
 ## find\_user\_name
 
+    my $name = $slack->find_user_name($id);
+
 ## next\_id
+
+    my $id = $slack->next_id;
 
 ## ping
 
+    $slack->ping;
+
 ## reconnect
 
+    $slack->reconnect;
+
 ## start
+
+    $slack->start;
 
 # ATTRIBUTES
 
@@ -90,17 +108,22 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
 [Mojo::Log](https://metacpan.org/pod/Mojo::Log) instance
 
+## metadata
+
+    my $metadata = $slack->metadata;
+
 ## token
 
 slack access token
-
-## pinger
 
 ## ws
 
 Websocket transaction
 
 ## auto\_reconnect
+
+    my $bool = $slack->auto_reconnect;
+    $slack->auto_reconnect($bool);
 
 # DEBUGGING
 

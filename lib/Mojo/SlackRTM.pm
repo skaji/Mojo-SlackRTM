@@ -255,21 +255,39 @@ Call slack api. See L<https://api.slack.com/methods> for details.
 
 =head2 connect
 
+  $slack->connect;
+
 =head2 find_channel_id
+
+  my $id = $slack->find_channel_id($name);
 
 =head2 find_channel_name
 
+  my $name = $slack->find_channel_name($id);
+
 =head2 find_user_id
+
+  my $id = $slack->find_user_id($name);
 
 =head2 find_user_name
 
+  my $name = $slack->find_user_name($id);
+
 =head2 next_id
+
+  my $id = $slack->next_id;
 
 =head2 ping
 
+  $slack->ping;
+
 =head2 reconnect
 
+  $slack->reconnect;
+
 =head2 start
+
+  $slack->start;
 
 =head1 ATTRIBUTES
 
@@ -285,17 +303,22 @@ L<Mojo::UserAgent> instance
 
 L<Mojo::Log> instance
 
+=head2 metadata
+
+  my $metadata = $slack->metadata;
+
 =head2 token
 
 slack access token
-
-=head2 pinger
 
 =head2 ws
 
 Websocket transaction
 
 =head2 auto_reconnect
+
+  my $bool = $slack->auto_reconnect;
+  $slack->auto_reconnect($bool);
 
 =head1 DEBUGGING
 

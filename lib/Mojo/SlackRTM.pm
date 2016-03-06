@@ -28,8 +28,18 @@ sub _dump {
     local $Data::Dumper::Indent = 1;
     local $Data::Dumper::Terse = 1;
     my $dump = Data::Dumper::Dumper(@_);
-    warn "  \e[33m$_\e[m\n" for split /\n/, $dump;
+    if (-t STDOUT) {
+        warn "  \e[33m$_\e[m\n" for split /\n/, $dump;
+    } else {
+        warn "  $_\n" for split /\n/, $dump;
+    }
 }
+
+my $TX_ERROR = sub {
+    my $tx = shift;
+    my $error = $tx->error;
+    $error->{code} ? "$error->{code} $error->{message}" : $error->{message};
+};
 
 sub metadata {
     my $self = shift;
@@ -66,11 +76,9 @@ sub connect {
     my $self = shift;
     my $token = $self->token or die "Missing token";
     my $tx = $self->ua->get("$START_URL?token=$token");
-    unless ($tx->success) {
-        my $e = $tx->error;
-        my $msg = sprintf "failed to get %s?token=XXXXX: %s",
-            $START_URL, $e->{code} ? "$e->{code} $e->{message}" : $e->{message};
-        $self->log->fatal($msg);
+    if (! ($tx->success and $tx->res->json("/ok")) ) {
+        my $error = $tx->success ? $tx->res->json("/error") : $TX_ERROR->($tx);
+        $self->log->fatal("failed to get $START_URL?token=XXX: $error");
         return;
     }
     my $metadata = $tx->res->json;
@@ -176,13 +184,17 @@ sub call_api {
     my ($self, $method, $param) = (shift, shift, shift);
     my $url = "https://slack.com/api/$method";
     my $cb = shift || sub {
-        (undef, my $tx) = @_;
-        return if $tx->success;
-        my $e = $tx->error;
-        $self->log->warn("$url: " . ($e->{code} ? "$e->{code} $e->{message}" : $e->{message}));
+        my ($slack, $tx) = @_;
+        if ($tx->success and $tx->res->json("/ok")) {
+            # OK
+            return;
+        }
+        my $error = $tx->success ? $tx->res->json("/error") : $TX_ERROR->($tx);
+        $slack->log->warn("$method: $error");
     };
     $param->{token} = $self->token unless exists $param->{token};
-    $self->ua->post($url => json => $param => sub {
+    DEBUG and $self->log->debug("===> call api '$method'");
+    $self->ua->post($url => form => $param => sub {
         (undef, my $tx) = @_;
         $cb->($self, $tx);
     });
@@ -227,10 +239,10 @@ See L<https://api.slack.com/rtm> for details.
 
   $slack->on(reaction_added => sub {
     my ($slack, $event) = @_;
-    my $reaction  = $event->{simple_smile};
+    my $reaction  = $event->{reaction};
     my $user_id   = $event->{user};
     my $user_name = $slack->find_user_name($user_id);
-    $slack->log->info("$user reacted with $reaction");
+    $slack->log->info("$user_name reacted with $reaction");
   });
 
 =head1 METHODS
@@ -244,13 +256,13 @@ Call slack api. See L<https://api.slack.com/methods> for details.
 
   $slack->call_api("channels.list", {exclude_archived => 1}, sub {
     my ($slack, $tx) = @_;
-    if ($tx->success) {
+    if ($tx->success and $tx->res->json("/ok")) {
       my $channels = $tx->res->json("/channels");
       $slack->log->info($_->{name}) for @$channels;
-    } else {
-      my $error = $tx->error;
-      $slack->log->error($error->{message});
+      return;
     }
+    my $error = $tx->success ? $tx->res->json("/error") : $tx->error->{message};
+    $slack->log->error($error);
   });
 
 =head2 connect

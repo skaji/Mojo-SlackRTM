@@ -32,10 +32,10 @@ See [https://api.slack.com/rtm](https://api.slack.com/rtm) for details.
 
     $slack->on(reaction_added => sub {
       my ($slack, $event) = @_;
-      my $reaction  = $event->{simple_smile};
+      my $reaction  = $event->{reaction};
       my $user_id   = $event->{user};
       my $user_name = $slack->find_user_name($user_id);
-      $slack->log->info("$user reacted with $reaction");
+      $slack->log->info("$user_name reacted with $reaction");
     });
 
 # METHODS
@@ -49,13 +49,13 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
     $slack->call_api("channels.list", {exclude_archived => 1}, sub {
       my ($slack, $tx) = @_;
-      if ($tx->success) {
+      if ($tx->success and $tx->res->json("/ok")) {
         my $channels = $tx->res->json("/channels");
         $slack->log->info($_->{name}) for @$channels;
-      } else {
-        my $error = $tx->error;
-        $slack->log->error($error->{message});
+        return;
       }
+      my $error = $tx->success ? $tx->res->json("/error") : $tx->error->{message};
+      $slack->log->error($error);
     });
 
 ## connect

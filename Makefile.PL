@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use 5.008005;
+use 5.010001;
 
 use ExtUtils::MakeMaker;
 
@@ -14,7 +14,7 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Mojo-SlackRTM",
   "LICENSE" => "perl",
-  "MIN_PERL_VERSION" => "5.008005",
+  "MIN_PERL_VERSION" => "5.010001",
   "NAME" => "Mojo::SlackRTM",
   "PREREQ_PM" => {
     "IO::Socket::SSL" => 0,

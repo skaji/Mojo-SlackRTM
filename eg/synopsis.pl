@@ -11,6 +11,15 @@ my ($token) = path("$FindBin::Bin/TOKEN")->lines({chomp => 1});
 
 my $slack = Mojo::SlackRTM->new(token => $token);
 
+$slack->on(message => sub {
+    my ($slack, $event) = @_;
+    my $channel_id = $event->{channel};
+    my $user_id    = $event->{user};
+    my $user_name  = $slack->find_user_name($user_id);
+    my $text       = $event->{text};
+    $slack->send_message($channel_id => "hello $user_name!");
+});
+
 $slack->on(reaction_added => sub {
     my ($slack, $event) = @_;
     my $reaction  = $event->{reaction};

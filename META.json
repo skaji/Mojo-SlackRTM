@@ -39,7 +39,7 @@
          "requires" : {
             "IO::Socket::SSL" : "0",
             "Mojolicious" : "0",
-            "perl" : "5.008005"
+            "perl" : "5.010001"
          }
       },
       "test" : {

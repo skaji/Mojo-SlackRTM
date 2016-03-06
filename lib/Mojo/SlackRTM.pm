@@ -224,10 +224,11 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
   my $slack = Mojo::SlackRTM->new(token => "your_token");
   $slack->on(message => sub {
     my ($slack, $event) = @_;
-    my $channel = $event->{channel};
-    my $user    = $event->{user};
-    my $text    = $event->{text};
-    $slack->send_message($channel => "hello $user!");
+    my $channel_id = $event->{channel};
+    my $user_id    = $event->{user};
+    my $user_name  = $slack->find_user_name($user_id);
+    my $text       = $event->{text};
+    $slack->send_message($channel_id => "hello $user_name!");
   });
   $slack->start;
 

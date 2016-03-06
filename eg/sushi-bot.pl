@@ -14,7 +14,10 @@ my $slack = Mojo::SlackRTM->new(token => $token);
 $slack->on(message => sub {
     my ($slack, $message) = @_;
     my $channel = $message->{channel};
-    $slack->send_message($channel => ":sushi:\n");
+    my $user = $message->{user};
+    my $channel_name = $slack->find_channel_name($channel);
+    my $user_name = $slack->find_user_name($user);
+    $slack->send_message($channel => ":sushi:, $user_name");
 });
 
 $slack->start;

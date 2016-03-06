@@ -89,7 +89,7 @@ sub connect {
             $self->_handle_event($event);
         });
         $self->ws->on(finish => sub {
-            my ($ws, $event) = @_;
+            my ($ws) = @_;
             $self->log->warn("detect 'finish' event");
             $ws->finish;
             $self->_clear;
@@ -118,11 +118,7 @@ sub _clear {
 
 sub _handle_event {
     my ($self, $event) = @_;
-    if (my $type = delete $event->{type}) {
-        if ($type eq "hello") {
-            DEBUG and $self->log->debug("===> skip 'hello' event");
-            return;
-        }
+    if (my $type = $event->{type}) {
         if ($type eq "message" and defined(my $reply_to = $event->{reply_to})) {
             DEBUG and $self->log->debug("===> skip 'message' event with reply_to $reply_to");
             DEBUG and $self->_dump($event);
@@ -164,8 +160,6 @@ sub find_user_name {
 
 sub send_message {
     my ($self, $channel, $text, %option) = @_;
-    # $option{as_user} = 1 unless exists $option{as_user};
-    # $option{as_user} = $option{as_user} ? Mojo::JSON->true : Mojo::JSON->false;
     my $hash = {
         id => $self->next_id,
         type => "message",
@@ -182,12 +176,16 @@ sub call_api {
     my ($self, $method, $param) = (shift, shift, shift);
     my $url = "https://slack.com/api/$method";
     my $cb = shift || sub {
-        my ($ua, $tx) = @_;
+        (undef, my $tx) = @_;
         return if $tx->success;
         my $e = $tx->error;
         $self->log->warn("$url: " . ($e->{code} ? "$e->{code} $e->{message}" : $e->{message}));
     };
-    $self->ua->post($url => json => $param => $cb);
+    $param->{token} = $self->token unless exists $param->{token};
+    $self->ua->post($url => json => $param => sub {
+        (undef, my $tx) = @_;
+        $cb->($self, $tx);
+    });
 }
 
 1;
@@ -207,10 +205,10 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
 
   my $slack = Mojo::SlackRTM->new(token => "your_token");
   $slack->on(message => sub {
-    my ($slack, $message) = @_;
-    my $channel = $message->{channel};
-    my $user    = $message->{user};
-    my $text    = $message->{text};
+    my ($slack, $event) = @_;
+    my $channel = $event->{channel};
+    my $user    = $event->{user};
+    my $text    = $event->{text};
     $slack->send_message($channel => "hello $user!");
   });
   $slack->start;
@@ -218,6 +216,86 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
 =head1 DESCRIPTION
 
 Mojo::SlackRTM is a SlackRTM client using L<Mojo::IOLoop>.
+
+This class inherits all events, methods, attributes from L<Mojo::EventEmitter>.
+
+=head1 EVENTS
+
+There are a lot of events, eg, B<hello>, B<message>, B<user_typing>, B<channel_marked>, ....
+
+See L<https://api.slack.com/rtm> for details.
+
+  $slack->on(reaction_added => sub {
+    my ($slack, $event) = @_;
+    my $reaction  = $event->{simple_smile};
+    my $user_id   = $event->{user};
+    my $user_name = $slack->find_user_name($user_id);
+    $slack->log->info("$user reacted with $reaction");
+  });
+
+=head1 METHODS
+
+=head2 call_api
+
+  $slack->call_api($method, $param);
+  $slack->call_api($method, $param, $cb);
+
+Call slack api. See L<https://api.slack.com/methods> for details.
+
+  $slack->call_api("channels.list", {exclude_archived => 1}, sub {
+    my ($slack, $tx) = @_;
+    if ($tx->success) {
+      my $channels = $tx->res->json("/channels");
+      $slack->log->info($_->{name}) for @$channels;
+    } else {
+      my $error = $tx->error;
+      $slack->log->error($error->{message});
+    }
+  });
+
+=head2 connect
+
+=head2 find_channel_id
+
+=head2 find_channel_name
+
+=head2 find_user_id
+
+=head2 find_user_name
+
+=head2 next_id
+
+=head2 ping
+
+=head2 reconnect
+
+=head2 start
+
+=head1 ATTRIBUTES
+
+=head2 ioloop
+
+L<< Mojo::IOLoop->singleton >>
+
+=head2 ua
+
+L<Mojo::UserAgent> instance
+
+=head2 log
+
+L<Mojo::Log> instance
+
+=head2 token
+
+slack access token
+
+=head2 pinger
+
+=head2 ws
+
+Websocket transaction
+
+=head2 auto_reconnect
 
 =head1 DEBUGGING
 

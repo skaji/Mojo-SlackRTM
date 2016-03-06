@@ -10,10 +10,10 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
 
     my $slack = Mojo::SlackRTM->new(token => "your_token");
     $slack->on(message => sub {
-      my ($slack, $message) = @_;
-      my $channel = $message->{channel};
-      my $user    = $message->{user};
-      my $text    = $message->{text};
+      my ($slack, $event) = @_;
+      my $channel = $event->{channel};
+      my $user    = $event->{user};
+      my $text    = $event->{text};
       $slack->send_message($channel => "hello $user!");
     });
     $slack->start;
@@ -21,6 +21,86 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
 # DESCRIPTION
 
 Mojo::SlackRTM is a SlackRTM client using [Mojo::IOLoop](https://metacpan.org/pod/Mojo::IOLoop).
+
+This class inherits all events, methods, attributes from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo::EventEmitter).
+
+# EVENTS
+
+There are a lot of events, eg, **hello**, **message**, **user\_typing**, **channel\_marked**, ....
+
+See [https://api.slack.com/rtm](https://api.slack.com/rtm) for details.
+
+    $slack->on(reaction_added => sub {
+      my ($slack, $event) = @_;
+      my $reaction  = $event->{simple_smile};
+      my $user_id   = $event->{user};
+      my $user_name = $slack->find_user_name($user_id);
+      $slack->log->info("$user reacted with $reaction");
+    });
+
+# METHODS
+
+## call\_api
+
+    $slack->call_api($method, $param);
+    $slack->call_api($method, $param, $cb);
+
+Call slack api. See [https://api.slack.com/methods](https://api.slack.com/methods) for details.
+
+    $slack->call_api("channels.list", {exclude_archived => 1}, sub {
+      my ($slack, $tx) = @_;
+      if ($tx->success) {
+        my $channels = $tx->res->json("/channels");
+        $slack->log->info($_->{name}) for @$channels;
+      } else {
+        my $error = $tx->error;
+        $slack->log->error($error->{message});
+      }
+    });
+
+## connect
+
+## find\_channel\_id
+
+## find\_channel\_name
+
+## find\_user\_id
+
+## find\_user\_name
+
+## next\_id
+
+## ping
+
+## reconnect
+
+## start
+
+# ATTRIBUTES
+
+## ioloop
+
+[Mojo::IOLoop->singleton](https://metacpan.org/pod/Mojo::IOLoop->singleton)
+
+## ua
+
+[Mojo::UserAgent](https://metacpan.org/pod/Mojo::UserAgent) instance
+
+## log
+
+[Mojo::Log](https://metacpan.org/pod/Mojo::Log) instance
+
+## token
+
+slack access token
+
+## pinger
+
+## ws
+
+Websocket transaction
+
+## auto\_reconnect
 
 # DEBUGGING
 

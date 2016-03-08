@@ -96,6 +96,12 @@ Call slack api. See [https://api.slack.com/methods](https://api.slack.com/method
 
     $slack->reconnect;
 
+## send\_message
+
+    $slack->send_message($channel => $text);
+
+Send `$text` to slack `$channel` via the websocket transaction.
+
 ## start
 
     $slack->start;
@@ -107,13 +113,13 @@ This is a convenient method. In fact it is equivalent to:
 
 # ATTRIBUTES
 
+## auto\_reconnect
+
+Automatically reconnect to slack
+
 ## ioloop
 
 [Mojo::IOLoop](https://metacpan.org/pod/Mojo::IOLoop) singleton
-
-## ua
-
-[Mojo::UserAgent](https://metacpan.org/pod/Mojo::UserAgent) instance
 
 ## log
 
@@ -127,13 +133,13 @@ The response of rtm.start. See [https://api.slack.com/methods/rtm.start](https:/
 
 slack access token
 
+## ua
+
+[Mojo::UserAgent](https://metacpan.org/pod/Mojo::UserAgent) instance
+
 ## ws
 
 Websocket transaction
-
-## auto\_reconnect
-
-Automatically reconnect to slack
 
 # DEBUGGING
 

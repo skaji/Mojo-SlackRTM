@@ -309,6 +309,12 @@ Call slack api. See L<https://api.slack.com/methods> for details.
 
   $slack->reconnect;
 
+=head2 send_message
+
+  $slack->send_message($channel => $text);
+
+Send C<$text> to slack C<$channel> via the websocket transaction.
+
 =head2 start
 
   $slack->start;
@@ -320,13 +326,13 @@ This is a convenient method. In fact it is equivalent to:
 
 =head1 ATTRIBUTES
 
+=head2 auto_reconnect
+
+Automatically reconnect to slack
+
 =head2 ioloop
 
 L<Mojo::IOLoop> singleton
-
-=head2 ua
-
-L<Mojo::UserAgent> instance
 
 =head2 log
 
@@ -340,13 +346,13 @@ The response of rtm.start. See L<https://api.slack.com/methods/rtm.start> for de
 
 slack access token
 
+=head2 ua
+
+L<Mojo::UserAgent> instance
+
 =head2 ws
 
 Websocket transaction
-
-=head2 auto_reconnect
-
-Automatically reconnect to slack
 
 =head1 DEBUGGING
 

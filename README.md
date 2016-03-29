@@ -2,13 +2,16 @@
 
 # NAME
 
-Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
+Mojo::SlackRTM - non-blocking SlackRTM client using Mojo::IOLoop
 
 # SYNOPSIS
 
     use Mojo::SlackRTM;
 
-    my $slack = Mojo::SlackRTM->new(token => "your_token");
+    # get from https://api.slack.com/web#authentication
+    my $token = "xoxb-12345678901-AbCdEfGhIjKlMnoPqRsTuVWx";
+
+    my $slack = Mojo::SlackRTM->new(token => $token);
     $slack->on(message => sub {
       my ($slack, $event) = @_;
       my $channel_id = $event->{channel};
@@ -21,7 +24,7 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
 
 # DESCRIPTION
 
-Mojo::SlackRTM is a SlackRTM client using [Mojo::IOLoop](https://metacpan.org/pod/Mojo::IOLoop).
+Mojo::SlackRTM is a non-blocking [SlackRTM](https://api.slack.com/rtm) client using [Mojo::IOLoop](https://metacpan.org/pod/Mojo::IOLoop).
 
 This class inherits all events, methods, attributes from [Mojo::EventEmitter](https://metacpan.org/pod/Mojo::EventEmitter).
 
@@ -45,9 +48,10 @@ See [https://api.slack.com/rtm](https://api.slack.com/rtm) for details.
 
     $slack->call_api($method);
     $slack->call_api($method, $param);
+    $slack->call_api($method, $cb);
     $slack->call_api($method, $param, $cb);
 
-Call slack api. See [https://api.slack.com/methods](https://api.slack.com/methods) for details.
+Call slack web api. See [https://api.slack.com/methods](https://api.slack.com/methods) for details.
 
     $slack->call_api("channels.list", {exclude_archived => 1}, sub {
       my ($slack, $tx) = @_;

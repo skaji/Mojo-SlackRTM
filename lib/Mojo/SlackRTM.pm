@@ -19,7 +19,7 @@ has "pinger";
 has 'ws';
 has 'auto_reconnect' => 1;
 
-our $START_URL = "https://slack.com/api/rtm.start";
+our $SLACK_URL = "https://slack.com/api";
 
 sub _dump {
     shift;
@@ -37,8 +37,14 @@ sub _dump {
 
 my $TX_ERROR = sub {
     my $tx = shift;
-    my $error = $tx->error;
-    $error->{code} ? "$error->{code} $error->{message}" : $error->{message};
+    return if $tx->success and $tx->res->json("/ok");
+    if ($tx->success) {
+        my $error = $tx->res->json("/error") || "Unknown error";
+        return $error;
+    } else {
+        my $error = $tx->error;
+        return $error->{code} ? "$error->{code} $error->{message}" : $error->{message};
+    }
 };
 
 sub metadata {
@@ -75,10 +81,9 @@ sub start {
 sub connect {
     my $self = shift;
     my $token = $self->token or die "Missing token";
-    my $tx = $self->ua->get("$START_URL?token=$token");
-    if (! ($tx->success and $tx->res->json("/ok")) ) {
-        my $error = $tx->success ? $tx->res->json("/error") : $TX_ERROR->($tx);
-        $self->log->fatal("failed to get $START_URL?token=XXX: $error");
+    my $tx = $self->ua->get("$SLACK_URL/rtm.start?token=$token");
+    if (my $error = $TX_ERROR->($tx)) {
+        $self->log->fatal("failed to get $SLACK_URL/rtm.start?token=XXX: $error");
         return;
     }
     my $metadata = $tx->res->json;
@@ -186,20 +191,24 @@ sub send_message {
 
 sub call_api {
     my ($self, $method) = (shift, shift);
-    my $param = shift || +{};
-    my $cb = shift || sub {
+    my ($param, $cb);
+    if (@_ and ref $_[-1] eq "CODE") {
+        $cb    = pop;
+        $param = shift;
+    } else {
+        $param = shift;
+    }
+    $param ||= +{};
+    $cb ||= sub {
         my ($slack, $tx) = @_;
-        if ($tx->success and $tx->res->json("/ok")) {
-            # OK
-            return;
+        if (my $error = $TX_ERROR->($tx)) {
+            $slack->log->warn("$method: $error");
         }
-        my $error = $tx->success ? $tx->res->json("/error") : $TX_ERROR->($tx);
-        $slack->log->warn("$method: $error");
     };
     $param->{token} = $self->token unless exists $param->{token};
 
     DEBUG and $self->log->debug("===> call api '$method'");
-    my $url = "https://slack.com/api/$method";
+    my $url = "$SLACK_URL/$method";
     $self->ua->post($url => form => $param => sub {
         (undef, my $tx) = @_;
         $cb->($self, $tx);
@@ -209,19 +218,22 @@ sub call_api {
 1;
 __END__
 
-=for stopwords SlackRTM
+=for stopwords SlackRTM api websocket ioloop ws
 
 =encoding utf-8
 
 =head1 NAME
 
-Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
+Mojo::SlackRTM - non-blocking SlackRTM client using Mojo::IOLoop
 
 =head1 SYNOPSIS
 
   use Mojo::SlackRTM;
 
-  my $slack = Mojo::SlackRTM->new(token => "your_token");
+  # get from https://api.slack.com/web#authentication
+  my $token = "xoxb-12345678901-AbCdEfGhIjKlMnoPqRsTuVWx";
+
+  my $slack = Mojo::SlackRTM->new(token => $token);
   $slack->on(message => sub {
     my ($slack, $event) = @_;
     my $channel_id = $event->{channel};
@@ -234,7 +246,7 @@ Mojo::SlackRTM - SlackRTM client using Mojo::IOLoop
 
 =head1 DESCRIPTION
 
-Mojo::SlackRTM is a SlackRTM client using L<Mojo::IOLoop>.
+Mojo::SlackRTM is a non-blocking L<SlackRTM|https://api.slack.com/rtm> client using L<Mojo::IOLoop>.
 
 This class inherits all events, methods, attributes from L<Mojo::EventEmitter>.
 
@@ -258,9 +270,10 @@ See L<https://api.slack.com/rtm> for details.
 
   $slack->call_api($method);
   $slack->call_api($method, $param);
+  $slack->call_api($method, $cb);
   $slack->call_api($method, $param, $cb);
 
-Call slack api. See L<https://api.slack.com/methods> for details.
+Call slack web api. See L<https://api.slack.com/methods> for details.
 
   $slack->call_api("channels.list", {exclude_archived => 1}, sub {
     my ($slack, $tx) = @_;

@@ -7,7 +7,7 @@ use 5.010001;
 use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "SlackRTM client using Mojo::IOLoop",
+  "ABSTRACT" => "non-blocking SlackRTM client using Mojo::IOLoop",
   "AUTHOR" => "Shoichi Kaji <skaji\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0

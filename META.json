@@ -1,5 +1,5 @@
 {
-   "abstract" : "SlackRTM client using Mojo::IOLoop",
+   "abstract" : "non-blocking SlackRTM client using Mojo::IOLoop",
    "author" : [
       "Shoichi Kaji <skaji@cpan.org>"
    ],

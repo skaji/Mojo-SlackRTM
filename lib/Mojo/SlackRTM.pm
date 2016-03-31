@@ -3,7 +3,6 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use IO::Socket::SSL;
 use Mojo::IOLoop;
-use Mojo::JSON qw(decode_json encode_json);
 use Mojo::Log;
 use Mojo::UserAgent;
 

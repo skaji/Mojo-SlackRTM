@@ -18,7 +18,7 @@ my %WriteMakefileArgs = (
   "NAME" => "Mojo::SlackRTM",
   "PREREQ_PM" => {
     "IO::Socket::SSL" => 0,
-    "Mojolicious" => 0
+    "Mojolicious" => "6.00"
   },
   "TEST_REQUIRES" => {
     "Test::More" => "0.98"
@@ -32,7 +32,7 @@ my %WriteMakefileArgs = (
 
 my %FallbackPrereqs = (
   "IO::Socket::SSL" => 0,
-  "Mojolicious" => 0,
+  "Mojolicious" => "6.00",
   "Test::More" => "0.98"
 );
 

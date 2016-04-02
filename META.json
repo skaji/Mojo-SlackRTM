@@ -38,7 +38,7 @@
       "runtime" : {
          "requires" : {
             "IO::Socket::SSL" : "0",
-            "Mojolicious" : "0",
+            "Mojolicious" : "6.00",
             "perl" : "5.010001"
          }
       },

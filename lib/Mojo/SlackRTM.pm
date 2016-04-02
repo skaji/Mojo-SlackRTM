@@ -8,7 +8,7 @@ use Mojo::UserAgent;
 
 use constant DEBUG => $ENV{MOJO_SLACKRTM_DEBUG};
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 has ioloop => sub { Mojo::IOLoop->singleton };
 has ua => sub { Mojo::UserAgent->new };

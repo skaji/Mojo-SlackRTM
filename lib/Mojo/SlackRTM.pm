@@ -3,10 +3,10 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use IO::Socket::SSL;
 use Mojo::IOLoop;
+use Mojo::JSON ();
 use Mojo::Log;
 use Mojo::UserAgent;
-use Mojo::JSON qw( to_json );
-use Scalar::Util qw( blessed );
+use Scalar::Util ();
 
 use constant DEBUG => $ENV{MOJO_SLACKRTM_DEBUG};
 
@@ -208,9 +208,9 @@ sub call_api {
     };
 
     # Data structures like "attachments" need to be serialized to JSON
-    for my $key ( keys %$param ) {
-        if ( ref $param->{ $key } && !blessed $param->{ $key } ) {
-            $param->{ $key } = to_json( $param->{ $key } );
+    for my $key (keys %$param) {
+        if (ref $param->{$key} && !Scalar::Util::blessed($param->{$key})) {
+            $param->{$key} = Mojo::JSON::to_json($param->{$key});
         }
     }
 

@@ -10,7 +10,7 @@ use Scalar::Util ();
 
 use constant DEBUG => $ENV{MOJO_SLACKRTM_DEBUG};
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 has ioloop => sub { Mojo::IOLoop->singleton };
 has ua => sub { Mojo::UserAgent->new };

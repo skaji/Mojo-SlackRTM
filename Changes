@@ -2,6 +2,9 @@ Revision history for Mojo-SlackRTM
 
 {{$NEXT}}
 
+0.03  2017-04-22 08:43:08 JST
+    - Encode data structures as json during call_api (preaction #1)
+
 0.02  2016-04-02 12:23:12 JST
     - Bump Mojolicious dependency
 

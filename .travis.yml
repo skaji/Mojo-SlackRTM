@@ -8,3 +8,5 @@ perl:
   - "5.14"
   - "5.12"
   - "5.10"
+script:
+  - prove -l t xt

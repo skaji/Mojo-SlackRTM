@@ -217,7 +217,7 @@ sub call_api {
     $param->{token} = $self->token unless exists $param->{token};
 
     DEBUG and $self->log->debug("===> call api '$method'");
-    DEBUG and $self->_dump( $param );
+    DEBUG and $self->_dump($param);
     my $url = "$SLACK_URL/$method";
     $self->ua->post($url => form => $param => sub {
         (undef, my $tx) = @_;

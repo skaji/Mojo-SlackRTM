@@ -5,6 +5,8 @@ use IO::Socket::SSL;
 use Mojo::IOLoop;
 use Mojo::Log;
 use Mojo::UserAgent;
+use Mojo::JSON qw( to_json );
+use Scalar::Util qw( blessed );
 
 use constant DEBUG => $ENV{MOJO_SLACKRTM_DEBUG};
 
@@ -204,9 +206,18 @@ sub call_api {
             $slack->log->warn("$method: $error");
         }
     };
+
+    # Data structures like "attachments" need to be serialized to JSON
+    for my $key ( keys %$param ) {
+        if ( ref $param->{ $key } && !blessed $param->{ $key } ) {
+            $param->{ $key } = to_json( $param->{ $key } );
+        }
+    }
+
     $param->{token} = $self->token unless exists $param->{token};
 
     DEBUG and $self->log->debug("===> call api '$method'");
+    DEBUG and $self->_dump( $param );
     my $url = "$SLACK_URL/$method";
     $self->ua->post($url => form => $param => sub {
         (undef, my $tx) = @_;

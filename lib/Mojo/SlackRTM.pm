@@ -105,8 +105,8 @@ sub connect {
         $self->ws->on(finish => sub {
             my ($ws) = @_;
             $self->log->warn("detect 'finish' event");
-            $self->finish;
-            $self->connect if $self->auto_reconnect;
+            $self->_clear;
+            Mojo::IOLoop->timer(1 => sub { $self->connect }) if $self->auto_reconnect;
         });
     });
 }

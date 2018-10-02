@@ -82,33 +82,38 @@ sub start {
 sub connect {
     my $self = shift;
     my $token = $self->token or die "Missing token";
-    my $tx = $self->ua->get("$SLACK_URL/rtm.start?token=$token");
-    if (my $error = $TX_ERROR->($tx)) {
-        $self->log->fatal("failed to get $SLACK_URL/rtm.start?token=XXX: $error");
-        return;
-    }
-    my $metadata = $tx->res->json;
-    $self->metadata($metadata);
-    my $url = $metadata->{url};
-    $self->ua->websocket($url => sub {
-        my ($ua, $ws) = @_;
-        unless ($ws->is_websocket) {
-            $self->log->fatal("$url does not return websocket connection");
-            return;
+
+    $self->ua->get("$SLACK_URL/rtm.start?token=$token" => sub{
+        my $tx = pop;
+
+        if (my $error = $TX_ERROR->($tx)) {
+            return $self->_retry_later("Failed to get $SLACK_URL/rtm.start?token=XXX: $error");
         }
-        $self->ws($ws);
-        $self->pinger( $self->ioloop->recurring(10 => sub { $self->ping }) );
-        $self->ws->on(json => sub {
-            my ($ws, $event) = @_;
-            $self->_handle_event($event);
-        });
-        $self->ws->on(finish => sub {
-            my ($ws) = @_;
-            $self->log->warn("detect 'finish' event");
-            $self->_clear;
-            Mojo::IOLoop->timer(1 => sub { $self->connect }) if $self->auto_reconnect;
+
+        my $metadata = $tx->res->json;
+        $self->metadata($metadata);
+        my $url = $metadata->{url};
+
+        $self->ua->websocket($url => sub {
+            my ($ua, $ws) = @_;
+            return $self->_retry_later("Unable to open websocket from $url") unless $ws->is_websocket;
+            $self->ws($ws);
+            $self->pinger( $self->ioloop->recurring(10 => sub { $self->ping }) );
+            $self->ws->on(json => sub { $self->_handle_event(pop) });
+            $self->ws->on(finish => sub {
+                $self->_clear;
+                $self->_retry_later('Websocket disconnected');
+            });
         });
     });
+}
+
+# Handle connection errors. See connect().
+sub _retry_later {
+    my ( $self, $error ) = @_;
+    $self->log->fatal($error) && return unless $self->auto_reconnect;
+    $self->log->warn($error) if $error;
+    Mojo::IOLoop->timer(1 => sub { $self->connect });
 }
 
 sub finish {
@@ -132,6 +137,7 @@ sub _clear {
     $self->ws(undef);
     $self->metadata(undef);
     $self->{_id} = 0;
+    $self->{_pings} = 0;
 }
 
 sub _handle_event {
@@ -144,7 +150,7 @@ sub _handle_event {
         }
         DEBUG and $self->log->debug("===> emit '$type' event");
         DEBUG and $self->_dump($event);
-        $self->emit($type, $event);
+        $type eq 'pong' ? $self->_wait_ping(-1) : $self->emit($type, $event);
     } else {
         DEBUG and $self->log->debug("===> got event without 'type'");
         DEBUG and $self->_dump($event);
@@ -153,11 +159,16 @@ sub _handle_event {
 
 sub ping {
     my $self = shift;
+    # Force WS finish when pong was lost more than once
+    return $self->ws->completed if $self->_wait_ping > 1;
     my $hash = {id => $self->next_id, type => "ping"};
     DEBUG and $self->log->debug("===> emit 'ping' event");
     DEBUG and $self->_dump($hash);
+    $self->_wait_ping(1);
     $self->ws->send({json => $hash});
 }
+
+sub _wait_ping { shift->{_pings} += shift || 0 }
 
 sub find_channel_id {
     my ($self, $name) = @_;

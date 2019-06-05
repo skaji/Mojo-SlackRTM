@@ -38,8 +38,8 @@ sub _dump {
 
 my $TX_ERROR = sub {
     my $tx = shift;
-    return if $tx->success and $tx->res->json("/ok");
-    if ($tx->success) {
+    return if $tx->result->is_success and $tx->res->json("/ok");
+    if ($tx->result->is_success) {
         my $error = $tx->res->json("/error") || "Unknown error";
         return $error;
     } else {
@@ -287,12 +287,12 @@ Call slack web api. See L<https://api.slack.com/methods> for details.
 
   $slack->call_api("channels.list", {exclude_archived => 1}, sub {
     my ($slack, $tx) = @_;
-    if ($tx->success and $tx->res->json("/ok")) {
+    if ($tx->result->is_success and $tx->res->json("/ok")) {
       my $channels = $tx->res->json("/channels");
       $slack->log->info($_->{name}) for @$channels;
       return;
     }
-    my $error = $tx->success ? $tx->res->json("/error") : $tx->error->{message};
+    my $error = $tx->result->is_success ? $tx->res->json("/error") : $tx->error->{message};
     $slack->log->error($error);
   });
 

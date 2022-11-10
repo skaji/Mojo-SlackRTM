@@ -10,7 +10,7 @@ use Scalar::Util ();
 
 use constant DEBUG => $ENV{MOJO_SLACKRTM_DEBUG};
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 has ioloop => sub { Mojo::IOLoop->singleton };
 has ua => sub { Mojo::UserAgent->new };
@@ -38,11 +38,12 @@ sub _dump {
 
 my $TX_ERROR = sub {
     my $tx = shift;
-    return if $tx->success and $tx->res->json("/ok");
-    if ($tx->success) {
+    return if !$tx->error and $tx->res->json("/ok");
+    if (!$tx->error) {
         my $error = $tx->res->json("/error") || "Unknown error";
         return $error;
-    } else {
+    }
+    else {
         my $error = $tx->error;
         return $error->{code} ? "$error->{code} $error->{message}" : $error->{message};
     }
@@ -298,12 +299,12 @@ Call slack web api. See L<https://api.slack.com/methods> for details.
 
   $slack->call_api("channels.list", {exclude_archived => 1}, sub {
     my ($slack, $tx) = @_;
-    if ($tx->success and $tx->res->json("/ok")) {
+    if (!$tx->error and $tx->res->json("/ok")) {
       my $channels = $tx->res->json("/channels");
       $slack->log->info($_->{name}) for @$channels;
       return;
     }
-    my $error = $tx->success ? $tx->res->json("/error") : $tx->error->{message};
+    my $error = !$tx->error ? $tx->res->json("/error") : $tx->error->{message};
     $slack->log->error($error);
   });
 

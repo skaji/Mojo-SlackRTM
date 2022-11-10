@@ -10,7 +10,7 @@ use Scalar::Util ();
 
 use constant DEBUG => $ENV{MOJO_SLACKRTM_DEBUG};
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 has ioloop => sub { Mojo::IOLoop->singleton };
 has ua => sub { Mojo::UserAgent->new };
@@ -38,11 +38,12 @@ sub _dump {
 
 my $TX_ERROR = sub {
     my $tx = shift;
-    return if $tx->success and $tx->res->json("/ok");
-    if ($tx->success) {
+    return if !$tx->error and $tx->res->json("/ok");
+    if (!$tx->error) {
         my $error = $tx->res->json("/error") || "Unknown error";
         return $error;
-    } else {
+    }
+    else {
         my $error = $tx->error;
         return $error->{code} ? "$error->{code} $error->{message}" : $error->{message};
     }
@@ -82,33 +83,38 @@ sub start {
 sub connect {
     my $self = shift;
     my $token = $self->token or die "Missing token";
-    my $tx = $self->ua->get("$SLACK_URL/rtm.start?token=$token");
-    if (my $error = $TX_ERROR->($tx)) {
-        $self->log->fatal("failed to get $SLACK_URL/rtm.start?token=XXX: $error");
-        return;
-    }
-    my $metadata = $tx->res->json;
-    $self->metadata($metadata);
-    my $url = $metadata->{url};
-    $self->ua->websocket($url => sub {
-        my ($ua, $ws) = @_;
-        unless ($ws->is_websocket) {
-            $self->log->fatal("$url does not return websocket connection");
-            return;
+
+    $self->ua->get("$SLACK_URL/rtm.start?token=$token" => sub{
+        my $tx = pop;
+
+        if (my $error = $TX_ERROR->($tx)) {
+            return $self->_retry_later("Failed to get $SLACK_URL/rtm.start?token=XXX: $error");
         }
-        $self->ws($ws);
-        $self->pinger( $self->ioloop->recurring(10 => sub { $self->ping }) );
-        $self->ws->on(json => sub {
-            my ($ws, $event) = @_;
-            $self->_handle_event($event);
-        });
-        $self->ws->on(finish => sub {
-            my ($ws) = @_;
-            $self->log->warn("detect 'finish' event");
-            $self->_clear;
-            Mojo::IOLoop->timer(1 => sub { $self->connect }) if $self->auto_reconnect;
+
+        my $metadata = $tx->res->json;
+        $self->metadata($metadata);
+        my $url = $metadata->{url};
+
+        $self->ua->websocket($url => sub {
+            my ($ua, $ws) = @_;
+            return $self->_retry_later("Unable to open websocket from $url") unless $ws->is_websocket;
+            $self->ws($ws);
+            $self->pinger( $self->ioloop->recurring(10 => sub { $self->ping }) );
+            $self->ws->on(json => sub { $self->_handle_event(pop) });
+            $self->ws->on(finish => sub {
+                $self->_clear;
+                $self->_retry_later('Websocket disconnected');
+            });
         });
     });
+}
+
+# Handle connection errors. See connect().
+sub _retry_later {
+    my ( $self, $error ) = @_;
+    $self->log->fatal($error) && return unless $self->auto_reconnect;
+    $self->log->warn($error) if $error;
+    Mojo::IOLoop->timer(1 => sub { $self->connect });
 }
 
 sub finish {
@@ -132,6 +138,7 @@ sub _clear {
     $self->ws(undef);
     $self->metadata(undef);
     $self->{_id} = 0;
+    $self->{_pings} = 0;
 }
 
 sub _handle_event {
@@ -144,7 +151,7 @@ sub _handle_event {
         }
         DEBUG and $self->log->debug("===> emit '$type' event");
         DEBUG and $self->_dump($event);
-        $self->emit($type, $event);
+        $type eq 'pong' ? $self->_wait_ping(-1) : $self->emit($type, $event);
     } else {
         DEBUG and $self->log->debug("===> got event without 'type'");
         DEBUG and $self->_dump($event);
@@ -153,11 +160,16 @@ sub _handle_event {
 
 sub ping {
     my $self = shift;
+    # Force WS finish when pong was lost more than once
+    return $self->ws->completed if $self->_wait_ping > 1;
     my $hash = {id => $self->next_id, type => "ping"};
     DEBUG and $self->log->debug("===> emit 'ping' event");
     DEBUG and $self->_dump($hash);
+    $self->_wait_ping(1);
     $self->ws->send({json => $hash});
 }
+
+sub _wait_ping { shift->{_pings} += shift || 0 }
 
 sub find_channel_id {
     my ($self, $name) = @_;
@@ -287,12 +299,12 @@ Call slack web api. See L<https://api.slack.com/methods> for details.
 
   $slack->call_api("channels.list", {exclude_archived => 1}, sub {
     my ($slack, $tx) = @_;
-    if ($tx->success and $tx->res->json("/ok")) {
+    if (!$tx->error and $tx->res->json("/ok")) {
       my $channels = $tx->res->json("/channels");
       $slack->log->info($_->{name}) for @$channels;
       return;
     }
-    my $error = $tx->success ? $tx->res->json("/error") : $tx->error->{message};
+    my $error = !$tx->error ? $tx->res->json("/error") : $tx->error->{message};
     $slack->log->error($error);
   });
 
